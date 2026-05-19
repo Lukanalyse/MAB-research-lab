@@ -10,7 +10,7 @@ from src.display.pages.MAB import render_mab
 st.set_page_config(
     page_title="MAB Research Lab",
     page_icon="📊",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
 )
 
