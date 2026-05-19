@@ -148,7 +148,7 @@ def render_pdf_library() -> None:
             data=selected_pdf.read_bytes(),
             file_name=selected_pdf.name,
             mime="application/pdf",
-            use_container_width=True,
+            width="stretch",
         )
 
     with st.expander("Show all local PDFs", expanded=False):
@@ -170,8 +170,7 @@ def render_home() -> None:
         <h3>Project objective</h3>
         <p>
         This application is built to understand Multi-Armed Bandits step by step.
-        The first version focuses on the basic stochastic bandit setting, a random
-        allocation baseline, and the Upper Confidence Bound algorithm.
+        This is still in production. It is not finish at all.
         </p>
         """
     )

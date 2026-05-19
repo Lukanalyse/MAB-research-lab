@@ -1,10 +1,32 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*.pyd
+*.pyo
+*.egg-info/
+build/
+dist/
+.venv/
 .env
+.envrc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+htmlcov/
+*.log
+
+# Streamlit
 .streamlit/secrets.toml
 
-# Optional: keep generated outputs local
-# outputs/
+# Optional generated outputs
+outputs/figures/
+outputs/reports/
+
+# IDEs
 .idea/
+.vscode/
+
+# OS
+.DS_Store

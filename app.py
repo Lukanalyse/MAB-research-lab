@@ -20,6 +20,10 @@ def apply_theme() -> None:
     st.markdown(
         """
         <style>
+        html {
+            font-size: 150%;
+        }
+
         .stApp {
             background: radial-gradient(circle at top left, #1E3A8A 0, #0F172A 32%, #020617 100%);
             color: #E5E7EB;

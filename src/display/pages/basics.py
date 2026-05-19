@@ -123,6 +123,7 @@ def simulate_random_learning(
     std: float,
     horizon: int,
     seed: int,
+    initial_pulls_per_arm: int = 0,
 ) -> dict[str, np.ndarray]:
     """Simulate random sampling to show how empirical means are learned.
 
@@ -132,6 +133,7 @@ def simulate_random_learning(
     """
     rng = np.random.default_rng(seed)
     n_arms = len(means)
+    warmup_steps = n_arms * initial_pulls_per_arm
 
     counts = np.zeros(n_arms, dtype=int)
     empirical_means = np.zeros(n_arms, dtype=float)
@@ -141,8 +143,11 @@ def simulate_random_learning(
     selected_arms = []
     rewards = []
 
-    for _ in range(horizon):
-        arm = int(rng.integers(0, n_arms))
+    for t in range(1, horizon + 1):
+        if t <= warmup_steps:
+            arm = (t - 1) % n_arms
+        else:
+            arm = int(rng.integers(0, n_arms))
         reward = float(rng.normal(means[arm], std))
 
         counts[arm] += 1
@@ -362,7 +367,7 @@ def render_basics() -> None:
                 data=pdf_note.read_bytes(),
                 file_name="MAB_Basics.pdf",
                 mime="application/pdf",
-                use_container_width=True,
+                width="stretch",
             )
 
         display_pdf_note(pdf_note)
@@ -405,7 +410,7 @@ def render_basics() -> None:
         )
 
     if mean_mode == "Random means":
-        seed = st.number_input("Environment seed", value=42, step=1)
+        seed = st.number_input("Environment seed", value=123, step=1)
         rng = np.random.default_rng(int(seed))
         means = np.sort(rng.uniform(0.20, 0.90, n_arms))
 
@@ -434,7 +439,7 @@ def render_basics() -> None:
         "The custom means only change the hidden environment."
     )
 
-    st.plotly_chart(plot_true_means(means), use_container_width=True)
+    st.plotly_chart(plot_true_means(means), width="stretch")
 
     m1, m2 = st.columns(2)
     m1.metric("Optimal arm", int(np.argmax(means)))
@@ -455,7 +460,7 @@ def render_basics() -> None:
         """
     )
 
-    sim_col1, sim_col2, sim_col3 = st.columns(3)
+    sim_col1, sim_col2, sim_col3, sim_col4 = st.columns(4)
 
     with sim_col1:
         sim_horizon = st.slider("Simulation horizon", 20, 500, 120, step=10)
@@ -466,11 +471,26 @@ def render_basics() -> None:
     with sim_col3:
         sim_seed = st.number_input("Simulation seed", value=123, step=1)
 
+    with sim_col4:
+        initial_uniform_pulls_per_arm = st.slider(
+            "Initial uniform pulls per arm",
+            min_value=0,
+            max_value=20,
+            value=0,
+            step=1,
+        )
+
+    if initial_uniform_pulls_per_arm > 0:
+        st.caption(
+            "Initialization phase: each arm is pulled uniformly before random sampling continues."
+        )
+
     simulation = simulate_random_learning(
         means=means,
         std=float(reward_noise),
         horizon=int(sim_horizon),
         seed=int(sim_seed),
+        initial_pulls_per_arm=int(initial_uniform_pulls_per_arm),
     )
 
     t_live = st.slider(
@@ -507,7 +527,7 @@ def render_basics() -> None:
                 empirical_history=simulation["empirical_history"],
                 t=t_live,
             ),
-            use_container_width=True,
+            width="stretch",
         )
 
     with tab2:
@@ -516,7 +536,7 @@ def render_basics() -> None:
                 counts_history=simulation["counts_history"],
                 t=t_live,
             ),
-            use_container_width=True,
+            width="stretch",
         )
 
     with tab3:
@@ -527,7 +547,7 @@ def render_basics() -> None:
                 counts=counts,
                 t=t_live,
             ),
-            use_container_width=True,
+            width="stretch",
         )
 
     st.info(

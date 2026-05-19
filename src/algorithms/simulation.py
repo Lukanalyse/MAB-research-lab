@@ -29,6 +29,7 @@ def run_simulation(
     stds: Sequence[float],
     horizon: int,
     seed: int = 42,
+    initial_pulls_per_arm: int = 1,
 ) -> pd.DataFrame:
     """Run one stochastic Gaussian bandit simulation.
 
@@ -44,6 +45,9 @@ def run_simulation(
         Number of sequential pulls.
     seed:
         Random seed used for reproducibility.
+    initial_pulls_per_arm:
+        Number of forced uniform pulls per arm before the policy-specific
+        selection rule starts. Use 0 to disable the initialization phase.
 
     Returns
     -------
@@ -55,32 +59,51 @@ def run_simulation(
     if horizon < 1:
         raise ValueError("horizon must be at least 1.")
 
+    if initial_pulls_per_arm < 0:
+        raise ValueError("initial_pulls_per_arm must be non-negative.")
+
     env = GaussianBandit(means=means, stds=stds, seed=seed)
     policy = make_policy(policy_name=policy_name, n_arms=env.n_arms, seed=seed + 1)
+    warmup_steps = env.n_arms * initial_pulls_per_arm
 
     cumulative_reward = 0.0
     cumulative_regret = 0.0
-    rows: list[dict[str, float | int | str]] = []
+    rows: list[dict[str, float | int | str | bool]] = []
 
     for t in range(1, horizon + 1):
-        selected_arm = policy.select_arm(t)
+        is_warmup = t <= warmup_steps
+        phase = "initial_uniform_allocation" if is_warmup else "adaptive_policy"
+
+        if is_warmup:
+            selected_arm = (t - 1) % env.n_arms
+        else:
+            selected_arm = policy.select_arm(t)
+
         reward = env.pull(selected_arm)
         policy.update(selected_arm, reward)
 
-        instantaneous_regret = env.optimal_mean - float(env.means[selected_arm])
+        selected_arm_mean = float(env.means[selected_arm])
+
+        # Regret is defined against expected rewards, not noisy realized rewards:
+        # r_t = mu_star - mu_{A_t}. The sampled reward is only used to update the
+        # policy and cumulative realized reward.
+        instantaneous_regret = env.optimal_mean - selected_arm_mean
         cumulative_reward += reward
         cumulative_regret += instantaneous_regret
 
-        row: dict[str, float | int | str] = {
+        row: dict[str, float | int | str | bool] = {
             "t": t,
             "policy": policy.name,
             "selected_arm": selected_arm,
+            "selected_arm_mean": selected_arm_mean,
             "reward": reward,
             "cumulative_reward": cumulative_reward,
             "instantaneous_regret": instantaneous_regret,
             "cumulative_regret": cumulative_regret,
             "optimal_arm": env.optimal_arm,
             "optimal_mean": env.optimal_mean,
+            "phase": phase,
+            "is_warmup": is_warmup,
         }
 
         for arm in range(env.n_arms):
@@ -99,6 +122,7 @@ def run_comparison(
     stds: Sequence[float],
     horizon: int,
     seed: int = 42,
+    initial_pulls_per_arm: int = 1,
 ) -> pd.DataFrame:
     """Run several policies on the same bandit parameters."""
     frames = []
@@ -110,6 +134,7 @@ def run_comparison(
             stds=stds,
             horizon=horizon,
             seed=seed + 10_000 * index,
+            initial_pulls_per_arm=initial_pulls_per_arm,
         )
         frames.append(frame)
 
